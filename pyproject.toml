@@ -1,0 +1,15 @@
+[project]
+name = "coattr"
+version = "0.1.0"
+description = "CoAttr: Statistical-Physical Co-Execution for Ordered Context Attribution Queries"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=2.0",
+    "matplotlib>=3.9",
+    "scikit-learn>=1.5",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
