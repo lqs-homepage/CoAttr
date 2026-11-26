@@ -1,6 +1,6 @@
 # CoAttr: Statistical–Physical Co-Execution for Ordered Context Attribution Queries
 
-Official code, unit tests, benchmark runners, and archived evaluation data for **CoAttr** (*CoAttr: Statistical–Physical Co-Execution for Ordered Context Attribution Queries*).
+Official code, unit tests, dual-engine benchmark runners (`SGLang` + `vLLM 0.34.0` APC), and archived evaluation data for **CoAttr** (*CoAttr: Statistical–Physical Co-Execution for Ordered Context Attribution Queries*).
 
 **Authors:** Qiushi Li, Anbang Wu, Haolin Ma, Heng Lin, Ju Ren, Tianyu Wo, Chunming Hu  
 *(Beihang University, Hohai University, Tsinghua University)*
@@ -9,21 +9,31 @@ Official code, unit tests, benchmark runners, and archived evaluation data for *
 
 ## Overview
 
-**CoAttr** compiles declarative ordered context attribution queries `ATTRIBUTION(C, Q; B, delta)` onto unmodified prefix-caching LLM serving engines (e.g., SGLang RadixAttention, vLLM APC) without altering frozen model weights or attention semantics:
+**CoAttr** compiles declarative ordered context attribution queries `ATTRIBUTION(C, Q; B, delta)` onto unmodified prefix-caching LLM serving engines (**SGLang RadixAttention** and **vLLM Automatic Prefix Caching**) without altering frozen model weights or attention semantics:
 
-1. **Logical Design Rewriter (`coattr/designs.py`, `coattr/theory_extensions.py`)**: Strength-3 ordered $g$-coset orthogonal arrays approaching the universal $(2/3, 6/7)$ prefix-rank frontier (Theorem 1), paired with $R$-block cyclic balanced rotation (Proposition 1).
-2. **Cost-Based Safe Planner (`coattr/safe_selector.py`, `coattr/integration.py`)**: Millisecond zero-probe selector (`Regime A`, Algorithm 1) guarded by exact polynomial-DP total-MSE inflation ($\gamma_g \le 1.05$) and vacant-channel calibration ($\kappa_g \le 1.50$) with automatic CUBE fallback, zero-extra-query vacant-channel SNR certificates, and Parseval-tightened empirical Bernstein bounds (`Regime B`, Theorem 2).
-3. **Capacity-Aware Physical Executor (`coattr/capacity_scheduler.py`, `coattr/scheduler.py`, `coattr/wave_merged_scheduler.py`)**: Decoupled width-aligned pioneer peeling and paged-LCP capacity-aware subtree tiling (Algorithm 2, Theorem 3) eliminating mixed prefill–suffix stalls and 32B-scale HBM LRU thrashing.
+1. **Logical Design Rewriter (`coattr_v2/designs_v2.py`, `coattr/designs.py`)**:
+   - Universal strength-3 prefix-rank lower bound and ordered dyadic $g$-cosets approaching the $(2/3, 6/7)$ prefix frontier (Theorem 1).
+   - **Kronecker Ordered Paley–Hadamard Cosets** ($H_g \otimes H_L$, $L \equiv 4 \pmod 8$, Paley Type-I/II) that eliminate $2\times$ power-of-two budget cliffs (cutting prefix tokens by $36\%$--$59\%$) while deterministically driving single-block intra-coset 1-sparse blind spots to **0.00%** (Theorem 2).
+   - Bidirectional degree-3 pairwise coupling analysis and all-$g$ multi-block cyclic balanced rotation ($g \in \{2, 4\}$, Proposition 1).
+2. **Cost-Based Safe Planner (`coattr_v2/safe_selector_v2.py`, `coattr/safe_selector.py`)**:
+   - Exact polynomial-DP total-MSE guard ($\gamma_g \le 1.05$) and vacant-channel calibration ($\kappa_g \le 1.50$) with automatic CUBE fallback ($<10$\,ms CPU).
+   - **Sign-corrected unbiased active Mean-MSE Parseval estimator** $Z_D = \frac{M-n}{n}(V_r(\mathrm{CUBE}) - V_r(D))$ providing exact $n\times$ range tightening ($71\times$--$90\times$ on long documents) for streaming Empirical Bernstein certification (`Regime B`, Theorem 3).
+   - **Closed-loop `Regime A`** (Algorithm 1): Wilson--Hilferty finite-DoF SNR alerting with lazy selective $R=2$ cyclic rotation reusing 100% of Block-1 evaluations.
+3. **Capacity-Aware Physical Executor (`coattr_v2/capacity_scheduler_v2.py`, `coattr/capacity_scheduler.py`)**:
+   - Decoupled width-aligned alternating pioneer peeling with explicit transient in-wave duplicate-prefix accounting ($\Delta_{\mathrm{wave}}$), closed-loop **adaptive inner wave-width contraction** ($W' \in \{32 \to 16 \to 8 \to 4\}$), and general $kW'$ paged-LCP subtree tiling (Algorithm 2, Theorem 4) supporting both SGLang (`page_size=64`) and vLLM APC (`block_size=16`).
+4. **Baselines & Statistical Audit (`coattr_v2/baselines_v2.py`)**:
+   - Faithful implementations of `BLIP-Pruning`, `Sketching-LOO`, `AttnTrace` single-pass attention extraction, `CUBE R=2`, question-weighted workload-cluster bootstrap 95% CIs, and paired sign-flip permutation tests.
 
 ---
 
 ## Repository Structure
 
 ```text
-├── coattr/            # Core optimizer, orthogonal coset designs, safe planner, capacity-aware scheduler, MSR baselines
-├── benchmarks/        # Live SGLang GPU benchmark runners (Qwen3-4B/32B, Gemma-4-31B) & MuSiQue pack builder
-├── tests/             # 23 deterministic offline unit tests covering Theorems 1-3, Proposition 1, and all modules
-├── data/              # Archived MuSiQue input packs (25Q) and aggregated CSV/JSON tables across all 11 workloads (57Q)
+├── coattr_v2/         # Upgraded CoAttr v2 modules (Kronecker Paley-Hadamard, Z_D Parseval, Adaptive-W' Alg. 2, Baselines)
+├── coattr/            # Original CoAttr v1 core library & Stage 3.1/3.2 modules
+├── benchmarks/        # Live GPU benchmark runners for SGLang & vLLM 0.34.0 APC (Qwen3-4B/32B, gemma-4-31B-it, 27 workloads / 150Q)
+├── tests/             # 47 deterministic offline unit tests (23 v1 + 24 v2) verifying Theorems 1-4, Prop. 1, and all modules
+├── data/              # Archived authoritative evaluation tables (data/m2-master-summary.json covering 27 workloads / 150Q, 32B acc, 4-quota C_KV, Gemma-4 99K, vLLM 0.34.0)
 └── scripts/           # Offline table verification and publication-figure reproduction scripts
 ```
 
@@ -31,34 +41,36 @@ Official code, unit tests, benchmark runners, and archived evaluation data for *
 
 ## Quickstart (Offline Verification — No GPU Required)
 
-All theoretical verifications, 23 unit tests, table summaries (Tables 1–3), and experimental figures (Figures 5, 7, 8, 9) run locally in seconds using [`uv`](https://docs.astral.sh/uv/) (Python 3.11+):
+All theoretical verifications and **47 deterministic unit tests** run locally in seconds using [`uv`](https://docs.astral.sh/uv/) (Python 3.11+):
 
 ```bash
-# 1. Run all 23 unit tests (designs, DP certificates, Parseval bounds, cyclic rotation, capacity tiling, MSR parity)
+# 1. Run all 47 unit tests (Paley-Hadamard mod-8 congruence, Z_D Parseval tightening,
+#    all-g cyclic separation, adaptive-W' delta_wave simulator, BLIP/Sketching/AttnTrace, bootstrap CIs)
 uv run --with pytest --with numpy --with scikit-learn pytest -v
 
-# 2. Verify and print Tables 1-3 directly from archived benchmark data
+# 2. Verify archived 11-workload Stage 3 tables & inspect 27-workload / 150Q M2 master summary
 uv run scripts/verify_tables.py
-
-# 3. Reproduce Figures 5, 7, 8, and 9 (PDF + 300-DPI PNG into figures/)
-uv run --with numpy --with matplotlib scripts/reproduce_figures.py
+uv run python -c "import json; d = json.load(open('data/m2-master-summary.json')); print('Sections:', list(d.keys()))"
 ```
 
 ---
 
-## Running Live GPU Benchmarks (SGLang)
+## Running Live GPU Benchmarks (SGLang & vLLM)
 
-The live benchmarks in `benchmarks/` run against an unmodified [SGLang](https://github.com/sgl-project/sglang) server with RadixAttention enabled:
+The live benchmark suites in `benchmarks/m2/` run against unmodified **SGLang** (`page_size=64`) and **vLLM 0.34.0** (`enable_prefix_caching=True`, `block_size=16`, per-request `prompt_logprob_start` + `skip_reading_prefix_cache=False`):
 
 ```bash
-# Build MuSiQue organic + controlled redundancy retrieval packs (already archived in data/inputs-rag.json)
-uv run benchmarks/build_rag_inputs.py --out data/inputs-rag.json
+# 27-workload / 150-query SOTA comparison + live m=120 Regime B stream (Qwen3-4B)
+uv run benchmarks/m2/run_job_a_4b.py --model Qwen/Qwen3-4B --help
 
-# Cross-model scheduler & HBM KV capacity ablation (Qwen3-4B / Qwen3-32B / gemma-4-31B-it)
-uv run benchmarks/outpost_e1_e2.py --model Qwen/Qwen3-32B --help
+# Qwen3-32B 5-rep timings (incl. 18Q & SingleQ65 1Q), 16Q attribution accuracy, & 4-quota C_KV sweep
+uv run benchmarks/m2/run_job_b_32b.py --model Qwen/Qwen3-32B --help
 
-# Full 11-workload, 57-query, 15-estimator evaluation suite
-uv run benchmarks/main_suite.py --model Qwen/Qwen3-4B --help
+# gemma-4-31B-it (99K tight KV pool) adaptive-W' width ablation & 6-workload 5-rep sweep
+uv run benchmarks/m2/run_job_c_gemma4.py --model google/gemma-4-31B-it --help
+
+# Cross-engine vLLM 0.34.0 APC (block_size=16) 5-rep evaluation on Qwen3-4B & Qwen3-32B
+uv run benchmarks/m2/run_job_d_vllm.py --help
 ```
 
 ---
