@@ -297,6 +297,43 @@ class SignCorrectedParsevalAndTheoryTests(unittest.TestCase):
         self.assertGreater(mean_zd, 0.01)
         self.assertAlmostEqual(mean_zd, mean_true_diff, delta=1e-12)  # Exact identity per realization when true_B=0!
 
+    def test_different_m_zd_paley_vs_dyadic_cube_unbiased_and_bounded(self) -> None:
+        """Verify generalized different-M Z_D = ((M_CUBE - n) V_r(CUBE) - (M_D - n) V_r(D)) / n
+        is strictly unbiased for MeanMSE(Paley) - MeanMSE(CUBE) and stays inside [-R_f^2/n, +R_f^2/n]
+        even when M_D = 24 (Kronecker Paley H_2 x H_12) != M_CUBE = 32 (dyadic CUBE)."""
+        n, m_paley, m_cube = 18, 24, 32
+
+        def f_deg3(z_row: np.ndarray) -> float:
+            # Strictly inside [0, 1] with zero clipping (0.12+0.10+0.14+0.12 = 0.48 <= 0.50)
+            return float(0.5 + 0.12 * z_row[0] + 0.10 * z_row[5] + 0.14 * (z_row[0] * z_row[1] * z_row[2]) + 0.12 * (z_row[10] * z_row[11] * z_row[12]))
+
+        true_b = np.zeros(n)
+        true_b[0] = 0.24
+        true_b[5] = 0.20
+
+        rng = random.Random(2027)
+        z_vals, true_diffs = [], []
+        for _ in range(300):
+            bp = draw_kronecker_paley_block(n, 2, 12, rng)
+            bc = draw_dyadic_block(n, m_cube, rng, g=1)
+
+            def eval_b(blk, m_h):
+                z_mat = np.array([[1.0 if ((blk.rows[2 * t] >> i) & 1) else -1.0 for i in range(n)] for t in range(m_h)], dtype=np.float64)
+                odd_v = np.array([0.5 * (f_deg3(z_mat[t]) - f_deg3(-z_mat[t])) for t in range(m_h)])
+                eff = 2.0 * (z_mat.T @ odd_v) / m_h
+                vac = vacant_channel_variance(odd_v.tolist(), eff.tolist(), m_h)
+                mse = float(np.mean((eff - true_b) ** 2))
+                return vac, mse
+
+            vp, mp = eval_b(bp, m_paley)
+            vc, mc = eval_b(bc, m_cube)
+            zd = parseval_active_mse_diff(vp, vc, m_paley, n, m_cube=m_cube)
+            self.assertLessEqual(abs(zd), 1.0 / n + 1e-12)
+            z_vals.append(zd)
+            true_diffs.append(mp - mc)
+
+        self.assertAlmostEqual(float(np.mean(z_vals)), float(np.mean(true_diffs)), delta=0.0025)
+
     def test_active_mse_parseval_bounds_n_times_tightening_and_tau_scale(self) -> None:
         """Verify Z_D achieves n-times range tightening (71x / 90x) and exact m_min at tau=0.005 vs 3e-5."""
         b71 = active_mse_parseval_bounds(71, score_range=1.0, delta=0.05, n_candidates=3)
@@ -428,7 +465,6 @@ class AdaptiveCapacitySchedulerV2Tests(unittest.TestCase):
             head = dt["heads"][0]
             tails = [dt["tails"][0] + [200000 + q] + [210000 + j for j in range(30)] for q in range(2)]
         else:
-            # Deterministic QASPER-1810-equivalent synthetic prompts (71 chunks, ~6.2K full-doc tokens)
             parts = [[1000 + i * 200 + k for k in range(88)] for i in range(71)]
             head = list(range(1, 129))
             tails = [[300000 + q * 100 + j for j in range(64)] for q in range(2)]

@@ -332,21 +332,26 @@ def parseval_active_mse_diff(
     vacant_var_cube: float,
     m: int,
     n: int,
+    *,
+    m_cube: int | None = None,
 ) -> float:
     """Sign-corrected unbiased per-chunk active Mean-MSE difference estimator Z_D:
 
-        Z_D := ((M - n) / n) * (V_r(CUBE) - V_r(D))
+        Z_D := (1 / n) * ((M_CUBE - n) * V_r(CUBE) - (M_D - n) * V_r(D))
 
-    By exact odd-order Parseval energy conservation:
-        TotalActiveMSE(D) + (M - n) * E[V_r(D)] = 4 * sum_{|S|>=3, odd} f_hat(S)^2,
+    Simplifies to ((M - n) / n) * (V_r(CUBE) - V_r(D)) when M_D = M_CUBE = M.
+    By exact odd-order Parseval energy conservation (independent of M):
+        TotalActiveMSE(D) + (M_D - n) * E[V_r(D)] = 4 * sum_{|S|>=3, odd} f_hat(S)^2,
     hence:
         E[Z_D] = MeanMSE(D) - MeanMSE(CUBE).
     Positive Z_D means candidate D has HIGHER active MSE than CUBE (risk inflation).
-    Deterministic range for bounded utility f in [a, a + R_f]: Z_D in [-R_f^2 / n, +R_f^2 / n].
+    Deterministic range for bounded utility f in [a, a + R_f]: Z_D in [-R_f^2 / n, +R_f^2 / n]
+    for both equal-M and different-M (e.g. Kronecker Paley vs. dyadic CUBE) comparisons.
     """
-    if not (1 <= n < m):
-        raise ValueError("require 1 <= n < m")
-    return ((m - n) / n) * (float(vacant_var_cube) - float(vacant_var_candidate))
+    mc = m if m_cube is None else int(m_cube)
+    if not (1 <= n < m) or not (1 <= n < mc):
+        raise ValueError("require 1 <= n < m and 1 <= n < m_cube")
+    return ((mc - n) * float(vacant_var_cube) - (m - n) * float(vacant_var_candidate)) / n
 
 
 def active_mse_parseval_bounds(

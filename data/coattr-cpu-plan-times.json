@@ -1,0 +1,7 @@
+{
+  "workloads": 27,
+  "dyadic_dp_gf2_27wl_s": 0.0367,
+  "paley_select_27wl_s": 0.0001,
+  "unified_paley_dyadic_27wl_s": 0.0369,
+  "per_doc_mean_ms": 1.365
+}

@@ -32,7 +32,7 @@ Official code, unit tests, dual-engine benchmark runners (`SGLang` + `vLLM 0.34.
 ├── coattr_v2/         # Upgraded CoAttr v2 modules (Kronecker Paley-Hadamard, Z_D Parseval, Adaptive-W' Alg. 2, Baselines)
 ├── coattr/            # Original CoAttr v1 core library & Stage 3.1/3.2 modules
 ├── benchmarks/        # Live GPU benchmark runners for SGLang & vLLM 0.34.0 APC (Qwen3-4B/32B, gemma-4-31B-it, 27 workloads / 150Q)
-├── tests/             # 47 deterministic offline unit tests (23 v1 + 24 v2) verifying Theorems 1-4, Prop. 1, and all modules
+├── tests/             # 48 deterministic offline unit tests (23 v1 + 25 v2) verifying Theorems 1-4, Prop. 1, and all modules
 ├── data/              # Archived authoritative evaluation tables (data/m2-master-summary.json covering 27 workloads / 150Q, 32B acc, 4-quota C_KV, Gemma-4 99K, vLLM 0.34.0)
 └── scripts/           # Offline table verification and publication-figure reproduction scripts
 ```
@@ -41,10 +41,10 @@ Official code, unit tests, dual-engine benchmark runners (`SGLang` + `vLLM 0.34.
 
 ## Quickstart (Offline Verification — No GPU Required)
 
-All theoretical verifications and **47 deterministic unit tests** run locally in seconds using [`uv`](https://docs.astral.sh/uv/) (Python 3.11+):
+All theoretical verifications and **48 deterministic unit tests** run locally in seconds using [`uv`](https://docs.astral.sh/uv/) (Python 3.11+):
 
 ```bash
-# 1. Run all 47 unit tests (Paley-Hadamard mod-8 congruence, Z_D Parseval tightening,
+# 1. Run all 48 unit tests (Paley-Hadamard mod-8 congruence, Z_D Parseval tightening,
 #    all-g cyclic separation, adaptive-W' delta_wave simulator, BLIP/Sketching/AttnTrace, bootstrap CIs)
 uv run --with pytest --with numpy --with scikit-learn pytest -v
 

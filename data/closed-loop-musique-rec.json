@@ -1,0 +1,12 @@
+{
+  "source": "Archived M2 Job-A (208) run-MuSiQue-*-cyclic_four_r2.json.gz (3 seeds x 11 MuSiQue packs)",
+  "by_z_snr": {
+    "0.5": {"organic_gold1": 0.9216, "organic_rec_k": 0.8333, "redundant24_gold1": 0.9167, "redundant24_rec_k": 0.8333},
+    "1.0": {"organic_gold1": 0.9216, "organic_rec_k": 0.8333, "redundant24_gold1": 0.9167, "redundant24_rec_k": 0.8333},
+    "1.5": {"organic_gold1": 0.9216, "organic_rec_k": 0.8333, "redundant24_gold1": 0.9167, "redundant24_rec_k": 0.8333},
+    "2.0": {"organic_gold1": 0.9216, "organic_rec_k": 0.8333, "redundant24_gold1": 0.9167, "redundant24_rec_k": 0.8333},
+    "2.5": {"organic_gold1": 0.9216, "organic_rec_k": 0.8333, "redundant24_gold1": 0.9167, "redundant24_rec_k": 0.8333},
+    "3.0": {"organic_gold1": 0.9216, "organic_rec_k": 0.8333, "redundant24_gold1": 0.9167, "redundant24_rec_k": 0.8333},
+    "4.0": {"organic_gold1": 0.9216, "organic_rec_k": 0.8203, "redundant24_gold1": 0.9167, "redundant24_rec_k": 0.8333}
+  }
+}
