@@ -78,3 +78,14 @@ uv run benchmarks/m2/run_job_d_vllm.py --help
 ## License
 
 Released under the [MIT License](LICENSE).
+
+## Ultra-Long Scaling & Multi-Witness Provenance (`Hier-CoAttr` & `CoAttr-Verify`)
+
+- **`coattr_v2/hierarchical_v2.py`**: Two-level random-polarity hierarchical Kronecker Paley--Hadamard attribution (`Hier-CoAttr`, Theorem 5) scaling cleanly to $n = 200$--$400+$ chunks ($20\text{K}$--$48\text{K}$ tokens) while guaranteeing exact flat-Banzhaf unbiasedness for arbitrary Boolean utilities $f : \{\pm 1\}^n \to \mathbb{R}$.
+- **`coattr_v2/verifiable_v2.py`**: Dual-threshold $(\tau_{\mathrm{suff}}, \tau_{\mathrm{clear}})$ multi-witness verifiable provenance (`CoAttr-Verify`, Algorithm 3) certifying all disjoint minimal sufficient witnesses $W_1, \dots, W_m$ and complete post-remediation clearance.
+- **`coattr_v2/tracllm_v2.py`**: Faithful `TracLLM` (USENIX Security'25) hierarchical perturbation tree baseline.
+- **`benchmarks/r2/` & `data/r2-master-summary.json`**: End-to-end CUAD multi-predicate `sem_filter` compliance auditing (14 commercial contracts, 204 predicates), long-context adversarial security forensics (18 workloads, 90 live incidents), and 33K-token tight-KV physical scheduling benchmarks (`gemma-4-31B-it`).
+- Run all 56 offline unit tests:
+  ```bash
+  uv run --with pytest --with numpy --with scikit-learn pytest -q tests/
+  ```
